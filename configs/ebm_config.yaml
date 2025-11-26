@@ -1,0 +1,54 @@
+model:
+  latent_dim: 16
+  num_modalities: 3
+  modality_emb_dim: 8
+  hidden_dim_gnn: 64
+  num_gnn_layers: 3
+
+  # Graph structure (configurable)
+  graph:
+    # Adjacency list: [source_nodes], [target_nodes]
+    # Default: complete graph
+    edge_index:
+      - [0, 0, 1, 1, 2, 2]
+      - [1, 2, 0, 2, 0, 1]
+
+training:
+  batch_size: 128
+  epochs: 150
+  lr: 1.0e-4
+  betas: [0.9, 0.999]
+  grad_clip_norm: 10.0
+
+  # Langevin sampling
+  langevin:
+    num_steps_train: 20
+    num_steps_gen: 50
+    step_size: 0.01
+    clip_grad: 1.0
+
+  # Replay buffer
+  buffer_size: 10000
+  reinit_ratio: 0.05
+
+  # Loss
+  lambda_reg: 0.1  # gradient penalty coefficient
+
+  # Mixed precision
+  use_amp: true
+
+  # Gradient checkpointing for GNN
+  use_checkpoint: false
+
+  # Checkpointing
+  save_every: 10
+  save_best: true
+
+data:
+  vae_checkpoints_dir: outputs/vae_checkpoints
+  num_workers: 4
+
+logging:
+  tensorboard_dir: outputs/logs
+  plot_every: 10
+  num_samples_viz: 16

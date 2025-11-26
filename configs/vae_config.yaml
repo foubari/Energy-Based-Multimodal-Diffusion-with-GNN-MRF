@@ -1,0 +1,36 @@
+model:
+  latent_dim: 16
+
+training:
+  batch_size: 128
+  epochs: 100
+  lr: 1.0e-3
+  betas: [0.9, 0.999]
+
+  # KL annealing (β-VAE)
+  beta_kl_schedule:
+    enabled: true
+    start: 0.0
+    end: 1.0
+    warmup_epochs: 10
+
+  # Early stopping
+  early_stopping:
+    patience: 15
+    min_delta: 1.0e-4
+
+  # Mixed precision
+  use_amp: true
+
+  # Checkpointing
+  save_every: 5
+  save_best: true
+
+data:
+  num_workers: 4
+  val_split: 0.1
+
+logging:
+  tensorboard_dir: outputs/logs
+  plot_every: 5
+  num_samples_viz: 64
