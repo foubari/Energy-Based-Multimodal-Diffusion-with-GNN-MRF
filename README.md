@@ -99,13 +99,38 @@ python generate.py \
 
 **Conditional Generation** (impute missing modalities):
 
+First, extract test images from MNIST:
+
 ```bash
+python utils/extract_test_images.py --output_dir test_images --num_images 5
+```
+
+This creates `test_images/` with sample MNIST digits in all 3 modalities. Then generate:
+
+```bash
+# Generate from modality 0 (original)
 python generate.py \
     --mode conditional \
     --ebm_checkpoint outputs/ebm_checkpoints/gnn_energy_best.pth \
-    --input_image path/to/mnist_digit.png \
+    --input_image test_images/digit_7_m0_original.png \
     --observed_modality 0 \
-    --output outputs/plots/conditional_samples.png
+    --output outputs/plots/conditional_from_m0.png
+
+# Generate from modality 1 (rotated 90°)
+python generate.py \
+    --mode conditional \
+    --ebm_checkpoint outputs/ebm_checkpoints/gnn_energy_best.pth \
+    --input_image test_images/digit_7_m1_rot90.png \
+    --observed_modality 1 \
+    --output outputs/plots/conditional_from_m1.png
+
+# Generate from modality 2 (flipped horizontally)
+python generate.py \
+    --mode conditional \
+    --ebm_checkpoint outputs/ebm_checkpoints/gnn_energy_best.pth \
+    --input_image test_images/digit_7_m2_flipH.png \
+    --observed_modality 2 \
+    --output outputs/plots/conditional_from_m2.png
 ```
 
 ## Project Structure
@@ -124,7 +149,8 @@ energy_diffusion/
 ├── utils/
 │   ├── visualization.py         # Plotting utilities
 │   ├── metrics.py               # Evaluation metrics
-│   └── checkpoint.py            # Model checkpointing
+│   ├── checkpoint.py            # Model checkpointing
+│   └── extract_test_images.py   # Extract MNIST test images
 ├── configs/
 │   ├── vae_config.yaml          # VAE hyperparameters
 │   └── ebm_config.yaml          # EBM hyperparameters
