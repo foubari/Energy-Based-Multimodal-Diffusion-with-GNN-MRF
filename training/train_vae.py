@@ -116,8 +116,8 @@ def train_one_epoch(model, dataloader, optimizer, scaler, beta, device, epoch):
         with autocast(enabled=(scaler is not None)):
             recon_x, mu, logvar = model(x)
 
-            # Compute loss
-            recon_loss = F.binary_cross_entropy(recon_x, x, reduction='sum')
+            # Compute loss (using binary_cross_entropy_with_logits for AMP stability)
+            recon_loss = F.binary_cross_entropy_with_logits(recon_x, x, reduction='sum')
             kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
             total_loss = recon_loss + beta * kl_loss
 
@@ -192,8 +192,8 @@ def validate(model, dataloader, beta, device, epoch):
             # Forward pass
             recon_x, mu, logvar = model(x)
 
-            # Compute loss
-            recon_loss = F.binary_cross_entropy(recon_x, x, reduction='sum')
+            # Compute loss (using binary_cross_entropy_with_logits for AMP stability)
+            recon_loss = F.binary_cross_entropy_with_logits(recon_x, x, reduction='sum')
             kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
             total_loss = recon_loss + beta * kl_loss
 

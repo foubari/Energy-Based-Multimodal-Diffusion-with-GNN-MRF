@@ -51,7 +51,8 @@ def compute_reconstruction_error(model, dataloader, device):
                 x, _, _, _ = batch
 
             x = x.to(device)
-            recon_x, _, _ = model(x)
+            recon_x_logits, _, _ = model(x)
+            recon_x = torch.sigmoid(recon_x_logits)
 
             mse = F.mse_loss(recon_x, x, reduction='sum')
             total_mse += mse.item()
@@ -242,10 +243,10 @@ def multimodal_consistency_score(vaes, gnn_energy, langevin_sampler,
             latent_dim=16
         )
 
-        # Decode each modality
-        img_m0 = vaes[0].decode(z_samples[:, 0, :])  # Original
-        img_m1 = vaes[1].decode(z_samples[:, 1, :])  # Rotated 90°
-        img_m2 = vaes[2].decode(z_samples[:, 2, :])  # Flipped H
+        # Decode each modality (decode returns logits, apply sigmoid)
+        img_m0 = torch.sigmoid(vaes[0].decode(z_samples[:, 0, :]))  # Original
+        img_m1 = torch.sigmoid(vaes[1].decode(z_samples[:, 1, :]))  # Rotated 90°
+        img_m2 = torch.sigmoid(vaes[2].decode(z_samples[:, 2, :]))  # Flipped H
 
         # Align back to original orientation
         img_m1_aligned = TF.rotate(img_m1, angle=90)  # Rotate back

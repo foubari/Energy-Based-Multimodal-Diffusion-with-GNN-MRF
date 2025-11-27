@@ -36,7 +36,10 @@ def visualize_reconstructions(model, dataloader, epoch, modality_idx=None,
             x = batch[modality_idx] if modality_idx is not None else batch[0]
 
         x = x[:num_images].to(device)
-        recon_x, _, _ = model(x)
+        recon_x_logits, _, _ = model(x)
+
+        # Apply sigmoid to convert logits to probabilities
+        recon_x = torch.sigmoid(recon_x_logits)
 
         # Create figure
         fig, axes = plt.subplots(2, num_images, figsize=(num_images * 2, 4))
@@ -88,7 +91,10 @@ def visualize_samples(model, epoch, modality_idx=None, num_samples=64,
     with torch.no_grad():
         # Sample from prior N(0, I)
         z = torch.randn(num_samples, model.latent_dim).to(device)
-        samples = model.decode(z)
+        samples_logits = model.decode(z)
+
+        # Apply sigmoid to convert logits to probabilities
+        samples = torch.sigmoid(samples_logits)
 
         # Create grid
         grid = make_grid(samples.cpu(), nrow=8, normalize=True, value_range=(0, 1), padding=2)
@@ -267,10 +273,10 @@ def visualize_generated_samples_multimodal(gnn_energy, vaes, langevin_sampler,
             latent_dim=config.model.latent_dim
         )
 
-        # Decode each modality
-        images_m0 = vaes[0].decode(z_samples[:, 0, :])
-        images_m1 = vaes[1].decode(z_samples[:, 1, :])
-        images_m2 = vaes[2].decode(z_samples[:, 2, :])
+        # Decode each modality (decode returns logits, apply sigmoid)
+        images_m0 = torch.sigmoid(vaes[0].decode(z_samples[:, 0, :]))
+        images_m1 = torch.sigmoid(vaes[1].decode(z_samples[:, 1, :]))
+        images_m2 = torch.sigmoid(vaes[2].decode(z_samples[:, 2, :]))
 
     # Create figure: each row is one sample, 3 columns for modalities
     fig, axes = plt.subplots(num_samples, 3, figsize=(6, num_samples * 2))
@@ -347,9 +353,9 @@ def visualize_conditional_generation(gnn_energy, vaes, dataloader, langevin_samp
 
         z_final, _ = langevin_sampler.sample(z_init, observed_mask, observed_values)
 
-        # Decode
-        x_m1_gen = vaes[1].decode(z_final[:, 1, :])
-        x_m2_gen = vaes[2].decode(z_final[:, 2, :])
+        # Decode (decode returns logits, apply sigmoid)
+        x_m1_gen = torch.sigmoid(vaes[1].decode(z_final[:, 1, :]))
+        x_m2_gen = torch.sigmoid(vaes[2].decode(z_final[:, 2, :]))
 
     # Plot: observed M0 | true M1, M2 | generated M1, M2
     fig, axes = plt.subplots(num_samples, 5, figsize=(10, num_samples * 2))

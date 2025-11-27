@@ -45,8 +45,7 @@ class VAE(nn.Module):
             nn.Unflatten(dim=1, unflattened_size=(64, 7, 7)),  # → 64 x 7 x 7
             nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # → 32 x 14 x 14
             nn.ReLU(),
-            nn.ConvTranspose2d(32, 1, kernel_size=4, stride=2, padding=1),  # → 1 x 28 x 28
-            nn.Sigmoid()  # Output in [0, 1]
+            nn.ConvTranspose2d(32, 1, kernel_size=4, stride=2, padding=1)  # → 1 x 28 x 28 (logits)
         )
 
     def encode(self, x):
@@ -119,8 +118,8 @@ def vae_loss(recon_x, x, mu, logvar, beta=1.0):
     Loss = Reconstruction Loss + β * KL Divergence
 
     Args:
-        recon_x: Reconstructed images (batch_size, 1, 28, 28)
-        x: Original images (batch_size, 1, 28, 28)
+        recon_x: Reconstructed image logits (batch_size, 1, 28, 28)
+        x: Original images (batch_size, 1, 28, 28) in [0, 1]
         mu: Latent mean (batch_size, latent_dim)
         logvar: Latent log variance (batch_size, latent_dim)
         beta: Weight for KL divergence (β-VAE)
@@ -130,8 +129,8 @@ def vae_loss(recon_x, x, mu, logvar, beta=1.0):
         recon_loss: Reconstruction loss (scalar)
         kl_loss: KL divergence loss (scalar)
     """
-    # Reconstruction loss (binary cross-entropy)
-    recon_loss = F.binary_cross_entropy(recon_x, x, reduction='sum')
+    # Reconstruction loss (binary cross-entropy with logits for AMP stability)
+    recon_loss = F.binary_cross_entropy_with_logits(recon_x, x, reduction='sum')
 
     # KL divergence: -0.5 * sum(1 + log(σ²) - μ² - σ²)
     kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())

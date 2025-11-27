@@ -82,10 +82,10 @@ def generate_unconditional(vaes, gnn_energy, langevin_sampler,
             latent_dim=latent_dim
         )
 
-        # Decode each modality
-        images_m0 = vaes[0].decode(z_samples[:, 0, :])
-        images_m1 = vaes[1].decode(z_samples[:, 1, :])
-        images_m2 = vaes[2].decode(z_samples[:, 2, :])
+        # Decode each modality (decode returns logits, apply sigmoid)
+        images_m0 = torch.sigmoid(vaes[0].decode(z_samples[:, 0, :]))
+        images_m1 = torch.sigmoid(vaes[1].decode(z_samples[:, 1, :]))
+        images_m2 = torch.sigmoid(vaes[2].decode(z_samples[:, 2, :]))
 
     # Visualize
     fig, axes = plt.subplots(num_samples, 3, figsize=(6, num_samples * 2))
@@ -156,10 +156,11 @@ def generate_conditional(vaes, gnn_energy, langevin_sampler,
             latent_dim=latent_dim
         )
 
-        # Decode all modalities
+        # Decode all modalities (decode returns logits, apply sigmoid)
         images = []
         for m in range(3):
-            img = vaes[m].decode(z_full[:, m, :])
+            img_logits = vaes[m].decode(z_full[:, m, :])
+            img = torch.sigmoid(img_logits)
             images.append(img)
 
     # Visualize
