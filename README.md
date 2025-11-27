@@ -281,6 +281,14 @@ Key hyperparameters to tune:
 - Enable gradient checkpointing (set `use_checkpoint: true` in config)
 - Reduce buffer size
 
+**OMP Error on Windows** (`libomp.dll` / `libiomp5md.dll` conflict):
+- Already fixed in all scripts via `os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'`
+- If error persists in notebooks/custom scripts, add this line before importing torch:
+  ```python
+  import os
+  os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+  ```
+
 ## Results
 
 Expected results after training:

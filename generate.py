@@ -1,8 +1,10 @@
 """
 Generation script for unconditional and conditional multimodal sampling.
 """
-import argparse
 import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # Fix OMP duplicate library issue on Windows
+
+import argparse
 import torch
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -74,15 +76,15 @@ def generate_unconditional(vaes, gnn_energy, langevin_sampler,
     """
     print(f"\nGenerating {num_samples} unconditional samples...")
 
-    with torch.no_grad():
-        # Generate latents via Langevin
-        z_samples, _ = langevin_sampler.sample_unconditional(
-            batch_size=num_samples,
-            num_modalities=3,
-            latent_dim=latent_dim
-        )
+    # Generate latents via Langevin (needs gradients)
+    z_samples, _ = langevin_sampler.sample_unconditional(
+        batch_size=num_samples,
+        num_modalities=3,
+        latent_dim=latent_dim
+    )
 
-        # Decode each modality (decode returns logits, apply sigmoid)
+    # Decode each modality (no gradients needed for VAE decoding)
+    with torch.no_grad():
         images_m0 = torch.sigmoid(vaes[0].decode(z_samples[:, 0, :]))
         images_m1 = torch.sigmoid(vaes[1].decode(z_samples[:, 1, :]))
         images_m2 = torch.sigmoid(vaes[2].decode(z_samples[:, 2, :]))
@@ -144,19 +146,20 @@ def generate_conditional(vaes, gnn_energy, langevin_sampler,
     image = Image.open(input_image_path)
     x_obs = transform(image).unsqueeze(0).to(device)  # (1, 1, 28, 28)
 
+    # Encode observed modality (no gradients needed)
     with torch.no_grad():
-        # Encode observed modality
         z_obs, _ = vaes[observed_modality].encode(x_obs)
 
-        # Generate missing modalities
-        z_full, _ = langevin_sampler.sample_conditional(
-            z_observed=z_obs,
-            observed_modality_idx=observed_modality,
-            num_modalities=3,
-            latent_dim=latent_dim
-        )
+    # Generate missing modalities (needs gradients for Langevin)
+    z_full, _ = langevin_sampler.sample_conditional(
+        z_observed=z_obs,
+        observed_modality_idx=observed_modality,
+        num_modalities=3,
+        latent_dim=latent_dim
+    )
 
-        # Decode all modalities (decode returns logits, apply sigmoid)
+    # Decode all modalities (no gradients needed)
+    with torch.no_grad():
         images = []
         for m in range(3):
             img_logits = vaes[m].decode(z_full[:, m, :])
@@ -212,8 +215,10 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # Create output directory
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
+    # Create output directory if needed
+    output_dir = os.path.dirname(args.output)
+    if output_dir:  # Only create if there's a directory path
+        os.makedirs(output_dir, exist_ok=True)
 
     # Load models
     print("\nLoading models...")

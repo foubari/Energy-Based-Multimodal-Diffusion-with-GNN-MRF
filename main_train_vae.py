@@ -2,6 +2,8 @@
 Main script to train VAE models for all 3 modalities.
 """
 import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'  # Fix OMP duplicate library issue on Windows
+
 import argparse
 import yaml
 import torch

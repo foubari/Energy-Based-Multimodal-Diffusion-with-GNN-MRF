@@ -44,15 +44,18 @@ class LangevinSampler:
             z_final: Refined latent codes
             trajectory: List of intermediate states (if return_trajectory=True)
         """
-        z = z_init.clone().detach().requires_grad_(True)
-        trajectory = [z.detach().clone()] if return_trajectory else None
+        z = z_init.clone().detach()
+        trajectory = [z.clone()] if return_trajectory else None
 
         for step in range(self.num_steps):
+            # Create a new tensor with gradient enabled (leaf node)
+            z_grad = z.detach().requires_grad_(True)
+
             # Compute energy
-            energy = self.energy_fn(z)
+            energy = self.energy_fn(z_grad)
 
             # Compute gradient ∇_z E_θ(z)
-            grad = torch.autograd.grad(energy.sum(), z, create_graph=False)[0]
+            grad = torch.autograd.grad(energy.sum(), z_grad, create_graph=False, retain_graph=False)[0]
 
             # Clip gradient if specified
             if self.clip_grad is not None:
@@ -60,24 +63,20 @@ class LangevinSampler:
 
             # Langevin update: z = z - η·∇E + √(2η)·noise
             noise = torch.randn_like(z) * np.sqrt(2 * self.step_size)
-            z_new = z.detach() - self.step_size * grad.detach() + noise
+            z = z - self.step_size * grad.detach() + noise
 
             # Apply observed mask (conditional generation)
             if observed_mask is not None:
                 mask_expanded = observed_mask.unsqueeze(-1)  # (B, M, 1)
-                z_new = torch.where(mask_expanded, observed_values, z_new)
-
-            z = z_new.requires_grad_(True)
+                z = torch.where(mask_expanded, observed_values, z)
 
             if return_trajectory:
-                trajectory.append(z.detach().clone())
-
-        z_final = z.detach()
+                trajectory.append(z.clone())
 
         if return_trajectory:
-            return z_final, trajectory
+            return z, trajectory
         else:
-            return z_final, None
+            return z, None
 
     def sample_unconditional(self, batch_size, num_modalities, latent_dim, return_trajectory=False):
         """
